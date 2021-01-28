@@ -164,7 +164,7 @@ mat = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данны�
 data = mat['lfp']
 print(data.shape)
 
-h = [0.1, 0.1]
+h = [0.1, 0.1]  # h_bio, h_sim
 
 for rec in range(10, 12):  # номер записи
     bio_data = []

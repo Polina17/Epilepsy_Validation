@@ -1,5 +1,5 @@
 # Скрипт для сравнения валидации биологических и симуляционных данных
-# при применении различных типов ядер к нормализованным данным
+# при применении различных типов ядер к фильтрованным нормализованным данным
 # при одинаковых сглаживающих параметрах.
 
 # Косинусное ядро при одинаковых h даёт более высокие p_value
@@ -251,16 +251,30 @@ p_cos = []
 h = [0.1, 0.2]  # h_bio, h_sim
 
 for i in range(0, 15, 7):  # сенсоры 1, 8, 15
-    normal(bio_data[i]).sort()  #
-    normal(sim_data[i]).sort()
+    bio_data_sort = sorted(normal(bio_data[i]), key=float)  # сортируем нормализованные данные
+    sim_data_sort = sorted(normal(sim_data[i]), key=float)
 
-    min_v = min(min(normal(bio_data[i])), min(normal(sim_data[i])))
-    max_v = max(max(normal(bio_data[i])), max(normal(sim_data[i])))
+    print(bio_data_sort)
+    print(sim_data_sort)
 
-    print(min_v, max_v)
+    bio_test = []  # убираем интервал около нуля, в котором сосредоточено большое кол-во данных
+    for elem in bio_data_sort:
+        if elem > 0.1 or elem < -0.1:  # [-0.1; 0.1] или [-1; 1] - фильтруем
+            bio_test.append(elem)
+
+    sim_test = []
+    for elem in sim_data_sort:
+        if elem > 0.1 or elem < -0.1:
+            sim_test.append(elem)
+
+    min_v = min(min(bio_test), min(sim_test))
+    max_v = max(max(bio_test), max(sim_test))
+
+    # print(min_v, max_v)
 
     values = []  # формируем массив значений, в которых будем искать плотность
     step = (max_v - min_v) / 3000  # число зависит от объёма выборки
+
     for j in range(3001):
         value = min_v + (step * j)
         values.append(value)  # массив значений для рассчёта плотности
@@ -268,22 +282,22 @@ for i in range(0, 15, 7):  # сенсоры 1, 8, 15
     values_array.append(values)
     print()
 
-    density_estim_bio_normal.append(density_estim(normal(bio_data[i]), h[0], values, 'normal'))
-    density_estim_bio_Epanechnikov.append(density_estim(normal(bio_data[i]), h[0], values, 'Epanechnikov'))
-    density_estim_bio_rectangular.append(density_estim(normal(bio_data[i]), h[0], values, 'rectangular'))
-    density_estim_bio_cos.append(density_estim(normal(bio_data[i]), h[0], values, 'cos'))
+    density_estim_bio_normal.append(density_estim(bio_test, h[0], values, 'normal'))
+    density_estim_bio_Epanechnikov.append(density_estim(bio_test, h[0], values, 'Epanechnikov'))
+    density_estim_bio_rectangular.append(density_estim(bio_test, h[0], values, 'rectangular'))
+    density_estim_bio_cos.append(density_estim(bio_test, h[0], values, 'cos'))
 
-    density_estim_sim_normal.append(density_estim(normal(sim_data[i]), h[1], values, 'normal'))
-    density_estim_sim_Epanechnikov.append(density_estim(normal(sim_data[i]), h[1], values, 'Epanechnikov'))
-    density_estim_sim_rectangular.append(density_estim(normal(sim_data[i]), h[1], values, 'rectangular'))
-    density_estim_sim_cos.append(density_estim(normal(sim_data[i]), h[1], values, 'cos'))
+    density_estim_sim_normal.append(density_estim(sim_test, h[1], values, 'normal'))
+    density_estim_sim_Epanechnikov.append(density_estim(sim_test, h[1], values, 'Epanechnikov'))
+    density_estim_sim_rectangular.append(density_estim(sim_test, h[1], values, 'rectangular'))
+    density_estim_sim_cos.append(density_estim(sim_test, h[1], values, 'cos'))
 
     print('h_bio ', h[0], 'h_sim ', h[1])
 
-    p_normal.append(p_value(normal(bio_data[i]), normal(sim_data[i]), h[0], h[1],  'normal'))
-    p_Epanechnikov.append(p_value(normal(bio_data[i]), normal(sim_data[i]), h[0], h[1], 'Epanechnikov'))
-    p_rectangular.append(p_value(normal(bio_data[i]), normal(sim_data[i]), h[0], h[1], 'rectangular'))
-    p_cos.append(p_value(normal(bio_data[i]), normal(sim_data[i]), h[0], h[1], 'cos'))
+    p_normal.append(p_value(bio_test, sim_test, h[0], h[1],  'normal'))
+    p_Epanechnikov.append(p_value(bio_test, sim_test, h[0], h[1], 'Epanechnikov'))
+    p_rectangular.append(p_value(bio_test, sim_test, h[0], h[1], 'rectangular'))
+    p_cos.append(p_value(bio_test, sim_test, h[0], h[1], 'cos'))
     print('p-value normal ', p_normal)
     print('p-value Epanechnikov ', p_Epanechnikov)
     print('p-value rectangular ', p_rectangular)
@@ -291,7 +305,7 @@ for i in range(0, 15, 7):  # сенсоры 1, 8, 15
 
 # Отрисовка графиков
 fig, ax = plt.subplots(nrows=6, ncols=2)
-plt.suptitle('Симуляция 2 / Эксперимент 21. Запись 30. Сенсоры 1, 8, 15. h_bio = %.1f, h_sim = %.1f' % (h[0], h[1]))
+plt.suptitle('Симуляция 2 / Эксперимент 21. Запись 30. Сенсоры 1, 8, 15. h_bio = %.2f, h_sim = %.2f' % (h[0], h[1]))
 ax[0, 0].set_title('Нормальное ядро')
 ax[0, 0].plot(values_array[0], density_estim_bio_normal[0], 'g', label='bio', linewidth=0.8)
 ax[0, 0].plot(values_array[0], density_estim_sim_normal[0], 'b', label='sim, p=%.5f' % p_normal[0], linewidth=0.8)
@@ -327,10 +341,10 @@ ax[5, 1].plot(values_array[2], density_estim_sim_cos[2], 'b', label='sim, p=%.5f
 
 for i in range(6):
     for j in range(2):
-        ax[i, j].legend(loc=2)
+        ax[i, j].legend(loc=2, fontsize=8)
 
-#ax[1, 0].legend(loc=2)
-#ax[4, 0].legend(loc=2)
-#ax[1, 1].legend(loc=2)
-#ax[4, 1].legend(loc=2)
+#ax[2, 0].legend(loc=2, fontsize=8)
+#ax[5, 0].legend(loc=2, fontsize=8)
+#ax[2, 1].legend(loc=2, fontsize=8)
+#ax[5, 1].legend(loc=2, fontsize=8)
 plt.show()

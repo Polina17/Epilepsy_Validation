@@ -1,3 +1,7 @@
+# Скрипт для нахождения p_value между био и симуляционными данными
+# при применении косинусного ядра к фильрованным нормализованным данным
+# с построением графиков и сравнением различных фильтров
+
 import math
 import matplotlib.pyplot as plt
 import scipy.integrate
@@ -141,8 +145,22 @@ def p_value(bio, neuron, h_bio, h_neuron):
     return result
 
 
+# Функция для нахождения массива значений, в которых будем искать значение плотность
+def values(bio_test, sim_test):
+    min_v = min(min(bio_test), min(sim_test))
+    max_v = max(max(bio_test), max(sim_test))
+
+    values = []  # формируем массив значений, в которых будем искать плотность
+    step = (max_v - min_v) / 3000  # число зависит от объёма выборки
+
+    for j in range(3001):
+        value = min_v + (step * j)
+        values.append(value)  # массив значений для рассчёта плотности bio
+
+    return values
+
 sim_data = []
-f = open('/home/polina/диплом/эпилепсия_данные_sim/sim_data_prepare1', 'r')
+f = open('/home/polina/диплом/эпилепсия_данные_sim/sim_data_prepare2', 'r')
 
 elem = []
 for line in f:
@@ -159,7 +177,7 @@ for elem in sim_data:
         sim_data_full.append(el)
 
 # получаем данные био
-mat = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данные_био/2011 may 03 P32 BCX rust/2011_05_03_0005.mat', squeeze_me=True)
+mat = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данные_био/2011 may 03 P32 BCX rust/2011_05_03_0021.mat', squeeze_me=True)
 data = mat['lfp']
 print(data.shape)
 
@@ -167,7 +185,7 @@ bio_data = []
 for j in range(15):
     result = []
     for i in range(2000):
-        result.append(data[i, j, 10])  # № записи
+        result.append(data[i, j, 30])  # № записи
     bio_data.append(result)
 
 bio_data_full = []
@@ -175,56 +193,91 @@ for elem in bio_data:
     for el in elem:
         bio_data_full.append(el)
 
-h = [0.1, 0.1]  # h_bio, h_sim
-for i in range(5, 10):
-    bio_data_sort = sorted(normal(bio_data[i]), key=float)
+density_estim_bio_cos_0_1 = []
+density_estim_sim_cos_0_1 = []
+density_estim_bio_cos_1 = []
+density_estim_sim_cos_1 = []
+
+p_cos_0_1 = []
+p_cos_1 = []
+
+values_array_0_1 = []
+values_array_1 = []
+
+h_0_1 = [0.1, 0.2]  # h_bio, h_sim]
+h_1 = [0.07, 0.15]
+
+for i in range(5, 10):  # 5,10  10, 15
+    bio_data_sort = sorted(normal(bio_data[i]), key=float)  # Сортируем нормализованные данные
     sim_data_sort = sorted(normal(sim_data[i]), key=float)
 
     print(bio_data_sort)
     print(sim_data_sort)
 
-    bio_test = []
+    bio_test_0_1 = []
+    bio_test_1 = []
     for elem in bio_data_sort:
-        if elem>1 or elem <-1:
-            bio_test.append(elem)
+        if elem>1 or elem <-1:   # Фильтруем
+            bio_test_1.append(elem)
+        if elem>0.1 or elem<-0.1:
+            bio_test_0_1.append(elem)
 
-    sim_test = []
+    sim_test_0_1 = []
+    sim_test_1 = []
     for elem in sim_data_sort:
-        if elem>1 or elem <-1:
-            sim_test.append(elem)
+        if elem > 1 or elem < -1:
+            sim_test_1.append(elem)
+        if elem > 0.1 or elem < -0.1:
+            sim_test_0_1.append(elem)
 
-    min_v = min(min(bio_test), min(sim_test))
-    max_v = max(max(bio_test), max(sim_test))
+    val_0_1 = values(bio_test_0_1, sim_test_0_1)
+    val_1 = values(bio_test_1, sim_test_1)
+    values_array_0_1.append(val_0_1)
+    values_array_1.append(val_1)
 
-#print(min_v, max_v)
+    density_estim_bio_cos_0_1.append(density_estim(bio_test_0_1, h_0_1[0], val_0_1, 'cos')) # h[i-5][0], h[i-10][0]
+    density_estim_bio_cos_1.append(density_estim(bio_test_1, h_1[0], val_1, 'cos'))
+    density_estim_sim_cos_0_1.append(density_estim(sim_test_0_1, h_0_1[1], val_0_1, 'cos'))
+    density_estim_sim_cos_1.append(density_estim(sim_test_1, h_1[1], val_1, 'cos'))
 
-    values = []  # формируем массив значений, в которых будем искать плотность
-    step = (max_v - min_v) / 3000  # число зависит от объёма выборки
+    p_cos_0_1.append(p_value(bio_test_0_1, sim_test_0_1, h_0_1[0], h_0_1[1]))
+    p_cos_1.append(p_value(bio_test_1, sim_test_1, h_1[0], h_1[1]))
+    print('p-value ', p_cos_0_1, p_cos_1)
 
-    for j in range(3001):
-        value = min_v + (step * j)
-        values.append(value)  # массив значений для рассчёта плотности bio
+# Отрисовка графиков
+fig, ax = plt.subplots(nrows=5, ncols=2)
+plt.suptitle('Симуляция 2 / Эксперимент 21. Запись 30. Сенсоры 6-10. Нормализованные данные, косинусное ядро')
+ax[0, 0].set_title('Фильтрация [-0.1; 0.1]. h_bio = %.2f, h_sim = %.2f' % (h_0_1[0], h_0_1[1]))
+ax[0, 0].plot(values_array_0_1[0], density_estim_bio_cos_0_1[0], 'g', label='bio', linewidth=0.8)
+ax[0, 0].plot(values_array_0_1[0], density_estim_sim_cos_0_1[0], 'b', label='sim, p=%.5f' % p_cos_0_1[0], linewidth=0.8)
+ax[1, 0].plot(values_array_0_1[1], density_estim_bio_cos_0_1[1], 'g', label='bio', linewidth=0.8)
+ax[1, 0].plot(values_array_0_1[1], density_estim_sim_cos_0_1[1], 'b', label='sim, p=%.5f' % p_cos_0_1[1], linewidth=0.8)
+ax[2, 0].plot(values_array_0_1[2], density_estim_bio_cos_0_1[2], 'g', label='bio', linewidth=0.8)
+ax[2, 0].plot(values_array_0_1[2], density_estim_sim_cos_0_1[2], 'b', label='sim, p=%.5f' % p_cos_0_1[2], linewidth=0.8)
+ax[3, 0].set_ylabel('Значение плотности вероятности')
+ax[3, 0].plot(values_array_0_1[3], density_estim_bio_cos_0_1[3], 'g', label='bio', linewidth=0.8)
+ax[3, 0].plot(values_array_0_1[3], density_estim_sim_cos_0_1[3], 'b', label='sim, p=%.5f' % p_cos_0_1[3], linewidth=0.8)
+ax[4, 0].plot(values_array_0_1[4], density_estim_bio_cos_0_1[4], 'g', label='bio', linewidth=0.8)
+ax[4, 0].plot(values_array_0_1[4], density_estim_sim_cos_0_1[4], 'b', label='sim, p=%.5f' % p_cos_0_1[4], linewidth=0.8)
+ax[4, 0].set_xlabel('Потенциал локального поля, мВ')
 
-    density_estim_bio = density_estim(bio_test, h[0], values, 'cos')  # h[i-5][0], h[i-10][0]
-    density_estim_neuron = density_estim(sim_test, h[1], values, 'cos')
+ax[0, 1].set_title('Фильтрация [-1; 1]. h_bio = %.2f, h_sim = %.2f' % (h_1[0], h_1[1]))
+ax[0, 1].plot(values_array_1[0], density_estim_bio_cos_1[0], 'g', label='bio', linewidth=0.8)
+ax[0, 1].plot(values_array_1[0], density_estim_sim_cos_1[0], 'b', label='sim, p=%.5f' % p_cos_1[0], linewidth=0.8)
+ax[1, 1].plot(values_array_1[1], density_estim_bio_cos_1[1], 'g', label='bio', linewidth=0.8)
+ax[1, 1].plot(values_array_1[1], density_estim_sim_cos_1[1], 'b', label='sim, p=%.5f' % p_cos_1[1], linewidth=0.8)
+ax[2, 1].plot(values_array_1[2], density_estim_bio_cos_1[2], 'g', label='bio', linewidth=0.8)
+ax[2, 1].plot(values_array_1[2], density_estim_sim_cos_1[2], 'b', label='sim, p=%.5f' % p_cos_1[2], linewidth=0.8)
+ax[3, 1].plot(values_array_1[3], density_estim_bio_cos_1[3], 'g', label='bio', linewidth=0.8)
+ax[3, 1].plot(values_array_1[3], density_estim_sim_cos_1[3], 'b', label='sim, p=%.5f' % p_cos_1[3], linewidth=0.8)
+ax[4, 1].plot(values_array_1[4], density_estim_bio_cos_1[4], 'g', label='bio', linewidth=0.8)
+ax[4, 1].plot(values_array_1[4], density_estim_sim_cos_1[4], 'b', label='sim, p=%.5f' % p_cos_1[4], linewidth=0.8)
 
-    T = statistics(bio_test, sim_test, h[0], h[1])
-
-    p = p_value(bio_test, sim_test, h[0], h[1])
-    print('p-value ', p)
-
-    plt.subplot(5, 1, i-5+1)  # i-5+1 i-10+1
-    plt.plot(values, density_estim_bio, 'slategrey', label='bio. h_bio = %.2f, h_sim = %.2f' % (h[0], h[1]))
-    plt.plot(values, density_estim_neuron, 'skyblue', label='sim, p-value=%.5f' % p)
-    if i == 5:
-        plt.title('Симуляция 1 / Эксперимент 5. Запись 10. Сенсоры 6-10. Нормализованные данные, косинусное ядро')
-    if i == 7:
-        plt.ylabel('Значение плотности вероятности')
-    if i == 9:
-        plt.xlabel('Потенциал локального поля, мВ')
-    plt.legend(loc=2)
-
+for i in range(5):
+    for j in range(2):
+        ax[i, j].legend(loc=2, fontsize=9)
+#ax[4, 1].legend(loc=1, fontsize=9)
+#ax[1, 0].legend(loc=2, fontsize=9)
+#ax[3, 1].legend(loc=1, fontsize=9)
+#ax[4, 1].legend(loc=1, fontsize=9)
 plt.show()
-
-#print(len(bio_data_sort))
-#print(len(sim_data_sort))
