@@ -1,5 +1,5 @@
 # Скрипт для нахождения p_value между био и био данными
-# при применении нормального ядра к исходным данным с построением графиков
+# при применении косинусного ядра к исходным данным с построением графиков
 
 import math
 import matplotlib.pyplot as plt
@@ -8,14 +8,16 @@ from numpy import inf, exp
 import scipy.io
 
 
-# функция для нахождения суммы значений нормального ядра в данной точке
-# array - выборка, x - значение, в котором ищем плотность, h - сглаживающий параметр
-def kernel_normal_sum(array, x, h):
+# функция для нахождения суммы значений косинусного ядра в данной точке
+def kernel_cos_sum(array, x, h):   # array выборка, x - знач., в котором ищем плотность, h - сглаживающий параметр
     sum = 0
     for elem in array:
-        u = (x-elem)/h
-        K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
-        sum += K
+        u = (x - elem)/h
+        if (math.fabs(u) <= 1):
+            K = (math.pi/4) * math.cos(u*math.pi/2)
+        else:
+            K = 0
+        sum +=K
     return sum
 
 
@@ -27,8 +29,8 @@ def kernel_normal_sum(array, x, h):
 def density_estim(array, h, values, type):
     result = []
     for elem in values:
-        if (type == 'normal'):
-            result.append(kernel_normal_sum(array, elem, h) * (1/(len(array)*h)))
+        if (type == 'cos'):
+            result.append(kernel_cos_sum(array, elem, h) * (1/(len(array)*h)))
     return result
 
 
@@ -39,7 +41,10 @@ def difference_bio(bio, h_bio):
     for elem in bio:
         for el in bio:
             u = (elem-el) / h_bio
-            K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
+            if (math.fabs(u) <= 1):
+                K = (math.pi / 4) * math.cos(u * math.pi / 2)
+            else:
+                K = 0
             sum += K
     result = sum / (math.pow(len(bio), 2) * h_bio)
     return result
@@ -52,7 +57,10 @@ def difference_neuron(neuron, h_neuron):
     for elem in neuron:
         for el in neuron:
             u = (elem - el) / h_neuron
-            K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
+            if (math.fabs(u) <= 1):
+                K = (math.pi / 4) * math.cos(u * math.pi / 2)
+            else:
+                K = 0
             sum += K
     result = sum / (math.pow(len(neuron), 2) * h_neuron)
     return result
@@ -66,7 +74,10 @@ def difference_bio_neuron_h_bio(bio, neuron, h_bio):
     for elem in bio:
         for el in neuron:
             u = (elem - el) / h_bio
-            K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
+            if (math.fabs(u) <= 1):
+                K = (math.pi / 4) * math.cos(u * math.pi / 2)
+            else:
+                K = 0
             sum += K
     result = sum / (len(bio) * len(neuron) * h_bio)
     return result
@@ -80,7 +91,10 @@ def difference_bio_neuron_h_neuron(bio, neuron, h_neuron):
     for elem in bio:
         for el in neuron:
             u = (elem - el) / h_neuron
-            K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
+            if (math.fabs(u) <= 1):
+                K = (math.pi / 4) * math.cos(u * math.pi / 2)
+            else:
+                K = 0
             sum += K
     result = sum / (len(bio) * len(neuron) * h_neuron)
     return result
@@ -112,7 +126,7 @@ def bio(data, rec):
     return bio_data
 
 # Получаем био данные
-mat = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данные_био/2011 may 03 P32 BCX rust/2011_05_03_0010.mat', squeeze_me=True)
+mat = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данные_био/2011 may 03 P32 BCX rust/2011_05_03_0003.mat', squeeze_me=True)
 data = mat['lfp']
 print(data.shape)
 
@@ -120,20 +134,20 @@ mat1 = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данны
 data1 = mat1['lfp']
 print(data1.shape)
 
-bio_d = bio(data, 20)
-bio_data = bio(data1, 10)
+bio_d = bio(data, 27)
+bio_data = bio(data1, 40)
 
 density_estim_bio = []
 density_estim_bio1 = []
 T = []
 p = []
 
-h = [7, 7]  # h_bio, h_bio_1
+h = [10, 10]  # h_bio, h_bio_1
 
 #min_v = min(min(bio_d[0]), min(bio_data[0]))
 #max_v = max(max(bio_d[0]), max(bio_data[0]))
-min_v = -800
-max_v = 800
+min_v = -1000
+max_v = 1000
 
 print(min_v, max_v)
 
@@ -150,12 +164,12 @@ for i in range(0, 15):  # 0,5  5,10  10,15
 
     print()
 
-    density_estim_bio.append(density_estim(bio_d[i], h[0], values, 'normal'))  # h[i-5][0]
-    density_estim_bio1.append(density_estim(bio_data[i], h[1], values, 'normal'))  #h[i-5][1]
+    density_estim_bio.append(density_estim(bio_d[i], h[0], values, 'cos'))  # h[i-5][0]
+    density_estim_bio1.append(density_estim(bio_data[i], h[1], values, 'cos'))  #h[i-5][1]
 
 #   print(density_estim_bio)
 #   print(density_estim_neuron)
-
+    print('Сенсор ', i+1)
     T.append(statistics(bio_d[i], bio_data[i], h[0], h[1]))
     print('h_bio ', h[0], 'h_sim ', h[1])
     print('значение статистики ', T[i])
@@ -167,7 +181,7 @@ for i in range(0, 15):  # 0,5  5,10  10,15
 
 # Отрисовка графиков
 fig, ax = plt.subplots(nrows=8, ncols=2)
-plt.suptitle('Эксперимент 10. Запись 20 / Эксперимент 23. Запись 10. h_bio = %.1f, h_bio_1 = %.1f' % (h[0], h[1]))
+plt.suptitle('Эксперимент 3. Запись 27 / Эксперимент 23. Запись 40. Исходные данные. h_bio = %.1f, h_bio_1 = %.1f' % (h[0], h[1]))
 ax[0, 0].set_title('Cенсоры 1-8')
 ax[0, 0].plot(values, density_estim_bio[0], 'g', label='bio', linewidth=0.8)
 ax[0, 0].plot(values, density_estim_bio1[0], 'b', label='bio_1', linewidth=0.8)
@@ -205,10 +219,10 @@ ax[6, 1].plot(values, density_estim_bio1[14], 'b', label='bio_1',linewidth=0.8)
 ax[7, 1].get_xaxis().set_visible(False)
 ax[7, 1].get_yaxis().set_visible(False)
 
-for i in range(8):
+for i in range(7):
     for j in range(2):
         ax[i, j].legend(loc=2)
-
+ax[7, 0].legend(loc=2)
 plt.show()
 
 for j in range(len(T)):

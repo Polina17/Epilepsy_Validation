@@ -1,5 +1,5 @@
 # Скрипт для нахождения p_value между симуляционными и симуляционными данными
-# при применении нормального ядра к исходным данным с построением графиков
+# при применении косинусного ядра к исходным данным с построением графиков
 
 import math
 import matplotlib.pyplot as plt
@@ -8,14 +8,16 @@ from numpy import inf, exp
 import scipy.io
 
 
-# функция для нахождения суммы значений нормального ядра в данной точке
-# array - выборка, x - значение, в котором ищем плотность, h - сглаживающий параметр
-def kernel_normal_sum(array, x, h):
+# функция для нахождения суммы значений косинусного ядра в данной точке
+def kernel_cos_sum(array, x, h):   # array выборка, x - знач., в котором ищем плотность, h - сглаживающий параметр
     sum = 0
     for elem in array:
-        u = (x-elem)/h
-        K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
-        sum += K
+        u = (x - elem)/h
+        if (math.fabs(u) <= 1):
+            K = (math.pi/4) * math.cos(u*math.pi/2)
+        else:
+            K = 0
+        sum +=K
     return sum
 
 
@@ -27,8 +29,8 @@ def kernel_normal_sum(array, x, h):
 def density_estim(array, h, values, type):
     result = []
     for elem in values:
-        if (type == 'normal'):
-            result.append(kernel_normal_sum(array, elem, h) * (1/(len(array)*h)))
+        if (type == 'cos'):
+            result.append(kernel_cos_sum(array, elem, h) * (1/(len(array)*h)))
     return result
 
 
@@ -39,7 +41,10 @@ def difference_bio(bio, h_bio):
     for elem in bio:
         for el in bio:
             u = (elem-el) / h_bio
-            K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
+            if (math.fabs(u) <= 1):
+                K = (math.pi / 4) * math.cos(u * math.pi / 2)
+            else:
+                K = 0
             sum += K
     result = sum / (math.pow(len(bio), 2) * h_bio)
     return result
@@ -52,7 +57,10 @@ def difference_neuron(neuron, h_neuron):
     for elem in neuron:
         for el in neuron:
             u = (elem - el) / h_neuron
-            K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
+            if (math.fabs(u) <= 1):
+                K = (math.pi / 4) * math.cos(u * math.pi / 2)
+            else:
+                K = 0
             sum += K
     result = sum / (math.pow(len(neuron), 2) * h_neuron)
     return result
@@ -66,7 +74,10 @@ def difference_bio_neuron_h_bio(bio, neuron, h_bio):
     for elem in bio:
         for el in neuron:
             u = (elem - el) / h_bio
-            K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
+            if (math.fabs(u) <= 1):
+                K = (math.pi / 4) * math.cos(u * math.pi / 2)
+            else:
+                K = 0
             sum += K
     result = sum / (len(bio) * len(neuron) * h_bio)
     return result
@@ -80,7 +91,10 @@ def difference_bio_neuron_h_neuron(bio, neuron, h_neuron):
     for elem in bio:
         for el in neuron:
             u = (elem - el) / h_neuron
-            K = math.pow(math.pi * 2, -0.5) * math.pow(math.e, -0.5 * math.pow(u, 2))
+            if (math.fabs(u) <= 1):
+                K = (math.pi / 4) * math.cos(u * math.pi / 2)
+            else:
+                K = 0
             sum += K
     result = sum / (len(bio) * len(neuron) * h_neuron)
     return result
@@ -109,9 +123,18 @@ def sim(f):
         elem.append(float(line))
 
     for i in range(15):  # 0-600, 601-1201, ...
-        sim_data.append(elem[i*601+1 : (i*601)+601 : 10])  # получили sim data по сенсорам 0.1 мс (по мс - :10)
+        sim_data.append(elem[i*601+1 : (i*601)+601])  # получили sim data по сенсорам 0.1 мс (по мс - :10)
 
     return sim_data
+
+
+# Функция для получения обобщённых данных
+def sim_full(sim_data):
+    result = []
+    for elem in sim_data:
+        for el in elem:
+            result.append(el)
+    return result
 
 # Получаем симуляционные данные
 f = open('/home/polina/диплом/эпилепсия_данные_sim/sim_data_prepare1', 'r')
@@ -119,6 +142,9 @@ file = open('/home/polina/диплом/эпилепсия_данные_sim/sim_d
 
 sim_data = sim(f)
 sim_data1 = sim(file)
+
+sim_data_full = sim_full(sim_data)
+sim_data_full1 = sim_full(sim_data1)
 
 density_estim_sim = []
 density_estim_sim1 = []
@@ -132,9 +158,9 @@ max_v = 0.004
 print(min_v, max_v)
 
 values = []  # формируем массив значений, в которых будем искать плотность
-step = (max_v - min_v) / 200  # число зависит от объёма выборки
+step = (max_v - min_v) / 1000  # число зависит от объёма выборки
 #    print(step)
-for j in range(201):
+for j in range(1001):
     value = min_v + (step * j)
     values.append(value)  # массив значений для рассчёта плотности вероятности
 
@@ -146,8 +172,8 @@ for i in range(0, 15):  # 0,5  5,10  10,15
 
     print()
 
-    density_estim_sim.append(density_estim(sim_data[i], h[0], values, 'normal'))  # h[i-5][0]
-    density_estim_sim1.append(density_estim(sim_data1[i], h[1], values, 'normal'))
+    density_estim_sim.append(density_estim(sim_data[i], h[0], values, 'cos'))  # h[i-5][0]
+    density_estim_sim1.append(density_estim(sim_data1[i], h[1], values, 'cos'))
 
     T.append(statistics(sim_data[i], sim_data1[i], h[0], h[1]))
     print('h_bio ', h[0], 'h_sim ', h[1])
@@ -157,9 +183,15 @@ for i in range(0, 15):  # 0,5  5,10  10,15
     print('p-value ', p[i])
     print()
 
+# Считаем плотность по обобщённым данным
+density_estim_sim_full = density_estim(sim_data_full, h[0], values, 'cos')
+density_estim_sim_full1 = density_estim(sim_data_full1, h[1], values, 'cos')
+T_full = statistics(sim_data_full, sim_data_full1, h[0], h[1])
+p_full = p_value(sim_data_full, sim_data_full1, h[0], h[1])
+
 # Отрисовка графиков
 fig, ax = plt.subplots(nrows=8, ncols=2)
-plt.suptitle('Симуляция 1 / Симуляция 2 (по мс). h_sim = %.5f, h_sim_1 = %.5f' % (h[0], h[1]))
+plt.suptitle('Симуляция 1 / Симуляция 2. Исходные данные (по 0.1 мс). h_sim = %.5f, h_sim_1 = %.5f' % (h[0], h[1]))
 ax[0, 0].set_title('Cенсоры 1-8')
 ax[0, 0].plot(values, density_estim_sim[0], 'g', label='sim', linewidth=0.8)
 ax[0, 0].plot(values, density_estim_sim1[0], 'b', label='sim_1', linewidth=0.8)
@@ -194,8 +226,11 @@ ax[5, 1].plot(values, density_estim_sim[13], 'g', label='sim', linewidth=0.8)
 ax[5, 1].plot(values, density_estim_sim1[13], 'b', label='sim_1', linewidth=0.8)
 ax[6, 1].plot(values, density_estim_sim[14], 'g', label='sim', linewidth=0.8)
 ax[6, 1].plot(values, density_estim_sim1[14], 'b', label='sim_1',linewidth=0.8)
-ax[7, 1].get_xaxis().set_visible(False)
-ax[7, 1].get_yaxis().set_visible(False)
+ax[6, 1].get_xaxis().set_visible(False)
+ax[6, 1].get_yaxis().set_visible(False)
+ax[7, 1].set_title('Обобщённые данные', pad = 0)
+ax[7, 1].plot(values, density_estim_sim_full, 'g', label='sim', linewidth=0.8)
+ax[7, 1].plot(values, density_estim_sim_full1, 'b', label='sim_1',linewidth=0.8)
 
 for i in range(8):
     for j in range(2):
@@ -207,3 +242,6 @@ for j in range(len(T)):
     print(T[j])
     print(p[j])
 
+print('Обобщённые данные')
+print(T_full)
+print(p_full)

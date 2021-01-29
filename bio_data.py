@@ -4,7 +4,7 @@ import scipy.io
 import matplotlib.pyplot as plt
 
 
-mat = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данные_био/2011 may 03 P32 BCX rust/2011_05_03_0021.mat', squeeze_me=True)
+mat = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данные_био/2011 may 03 P32 BCX rust/2011_05_03_0023.mat', squeeze_me=True)
 
 print(mat.keys())
 data = mat['lfp']
@@ -17,7 +17,7 @@ lfp = []     # lfp, j - сенсоры, i - данные
 for j in range(15):   # 16
     result = []
     for i in range(2000):
-        result.append(data[i,j,30])  # № записи
+        result.append(data[i,j,40])  # № записи
     lfp.append(result)
 
 count = 1
@@ -29,12 +29,12 @@ for elem in lfp:
 print(len(lfp))
 
 
-fig = plt.figure(1) #первое окно с графиками
+fig = plt.figure(1) # первое окно с графиками
 for i in range(15):  # 16
     plt.subplot(15,1,i+1)  # 16
     plt.plot(values, lfp[i], linewidth=1.0)
     if i == 0:
-        plt.title('День 1. Эксперимент 21. Запись 30')
+        plt.title('Эксперимент 23. Запись 40')
     if i == 7:
         plt.ylabel('Потенциал локального поля, мВ')
     if i == 14:  # 15
