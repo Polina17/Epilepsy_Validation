@@ -126,7 +126,7 @@ def bio(data, rec):
     return bio_data
 
 # Получаем био данные
-mat = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данные_био/2011 may 03 P32 BCX rust/2011_05_03_0003.mat', squeeze_me=True)
+mat = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данные_био/2011 may 03 P32 BCX rust/2011_05_03_0010.mat', squeeze_me=True)
 data = mat['lfp']
 print(data.shape)
 
@@ -134,7 +134,7 @@ mat1 = scipy.io.loadmat('/home/polina/диплом/эпилепсия_данны
 data1 = mat1['lfp']
 print(data1.shape)
 
-bio_d = bio(data, 27)
+bio_d = bio(data, 41)
 bio_data = bio(data1, 40)
 
 density_estim_bio = []
@@ -181,7 +181,7 @@ for i in range(0, 15):  # 0,5  5,10  10,15
 
 # Отрисовка графиков
 fig, ax = plt.subplots(nrows=8, ncols=2)
-plt.suptitle('Эксперимент 3. Запись 27 / Эксперимент 23. Запись 40. Исходные данные. h_bio = %.1f, h_bio_1 = %.1f' % (h[0], h[1]))
+plt.suptitle('Эксперимент 10. Запись 41 / Эксперимент 23. Запись 40. Исходные данные. h_bio = %.1f, h_bio_1 = %.1f' % (h[0], h[1]))
 ax[0, 0].set_title('Cенсоры 1-8')
 ax[0, 0].plot(values, density_estim_bio[0], 'g', label='bio', linewidth=0.8)
 ax[0, 0].plot(values, density_estim_bio1[0], 'b', label='bio_1', linewidth=0.8)
